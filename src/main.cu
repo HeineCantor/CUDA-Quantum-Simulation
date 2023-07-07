@@ -25,7 +25,7 @@ __global__ void single_X_kernel(cuDoubleComplex* stateVector, int statesNumber, 
 
         cuDoubleComplex coefficients[2] = {stateVector[iCoeff], stateVector[iXORCoeff]};
 
-        gate_x(coefficients);
+        gates::gate_x(coefficients);
 
         stateVector[iCoeff] = coefficients[0];
         stateVector[iXORCoeff] = coefficients[1];
@@ -45,7 +45,7 @@ __global__ void single_Z_kernel(cuDoubleComplex* stateVector, int statesNumber, 
 
         cuDoubleComplex coefficients[2] = {stateVector[iCoeff], stateVector[iXORCoeff]};
 
-        gate_z(coefficients);
+        gates::gate_z(coefficients);
 
         stateVector[iCoeff] = coefficients[0];
         stateVector[iXORCoeff] = coefficients[1];
@@ -65,7 +65,7 @@ __global__ void single_hadamard_kernel(cuDoubleComplex* stateVector, int statesN
 
         cuDoubleComplex coefficients[2] = {stateVector[iCoeff], stateVector[iXORCoeff]};
 
-        gate_hadamard(coefficients);
+        gates::gate_hadamard(coefficients);
 
         stateVector[iCoeff] = coefficients[0];
         stateVector[iXORCoeff] = coefficients[1];
