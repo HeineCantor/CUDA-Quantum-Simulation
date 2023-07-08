@@ -7,10 +7,10 @@
 #include "gate.cuh"
 #include "../include/print_util.cuh"
 
-#define NUM_QUBITS 4
+#define NUM_QUBITS 8
 #define THREAD_PER_BLOCK 256
 
-#define MAX_QUBITS_PER_SM 2
+#define MAX_QUBITS_PER_SM 4
 
 __host__ __device__ inline int twoToThePower(int exp);
 
@@ -19,6 +19,7 @@ __global__ void single_Z_kernel(cuDoubleComplex* stateVector, int statesNumber, 
 __global__ void single_hadamard_kernel(cuDoubleComplex* stateVector, int statesNumber, int qubit_index);
 
 __global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector);
+__global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit);
 
 void singleGateSimulation();
 void nQubitGateSimulation();

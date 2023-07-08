@@ -19,11 +19,14 @@ void printSingleQubitSimulationDetails(int numQubits, int threadNumber, int bloc
     cout << endl;
 }
 
-void printNQubitsSimulationDetails(int numQubits)
+void printNQubitsSimulationDetails(int numQubits, int blockNumber)
 {
     printGenericSimulationDetails(numQubits);
 
+    cout << "======= SIMULATION FOR AN N-QUBIT GATE =======" << endl;
+    cout << "Required Blocks number: " << blockNumber << endl;
 
+    cout << endl;
 }
 
 void printStateVector(cuDoubleComplex* vector, int vectorCount, int maxStatesToPrint)

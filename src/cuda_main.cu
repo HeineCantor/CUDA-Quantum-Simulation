@@ -142,6 +142,44 @@ __global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector)
         stateVector[kIndex ^ threadIndex] = subCoefficients[threadIndex];
 }
 
+__global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit)
+{
+    __shared__ cuDoubleComplex subCoefficients[1 << MAX_QUBITS_PER_SM];
+
+    int threadIndex = threadIdx.x;
+    int kIndex = blockIdx.x;    // blockIndex -> k coefficient
+
+    int twoToTheQ = twoToThePower(startingQubit);
+
+    if(threadIndex < twoToThePower(MAX_QUBITS_PER_SM))
+        subCoefficients[threadIndex] = stateVector[kIndex ^ (twoToTheQ * threadIndex)];
+ 
+    for(int i = 0; i < MAX_QUBITS_PER_SM; i++)
+    {
+        __syncthreads();
+
+        if(threadIndex < twoToThePower(MAX_QUBITS_PER_SM - 1))
+        {
+            int xorOffset = (1 << i); //2^qubit_index
+
+            int iCoeff = threadIndex + (threadIndex / xorOffset) * xorOffset;
+            int iXORCoeff = iCoeff ^ xorOffset;
+
+            cuDoubleComplex coefficients[2] = {subCoefficients[iCoeff], subCoefficients[iXORCoeff]};
+
+            gates::gate_hadamard(coefficients);
+
+            subCoefficients[iCoeff] = coefficients[0];
+            subCoefficients[iXORCoeff] = coefficients[1];
+        }
+    }
+
+    __syncthreads();
+
+    if(threadIndex < twoToThePower(MAX_QUBITS_PER_SM))
+        stateVector[kIndex ^ (twoToTheQ * threadIndex)] = subCoefficients[threadIndex];
+}
+
 void nQubitGateSimulation()
 {
     int statesNumber = twoToThePower(NUM_QUBITS);
@@ -149,7 +187,7 @@ void nQubitGateSimulation()
 
     int blockNumber = twoToThePower(NUM_QUBITS - MAX_QUBITS_PER_SM);
 
-    printNQubitsSimulationDetails(NUM_QUBITS);
+    printNQubitsSimulationDetails(NUM_QUBITS, blockNumber);
 
     cuDoubleComplex unitaryComplex;
     unitaryComplex.x = 1;
@@ -171,6 +209,7 @@ void nQubitGateSimulation()
     CHKERR( cudaPeekAtLastError() );
 
     // MSB Kernel Call
+    MSB_nQubit_kernel<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, NUM_QUBITS / 2);
 
     CHKERR( cudaPeekAtLastError() );
 
@@ -185,7 +224,7 @@ void nQubitGateSimulation()
 
 int main()
 {
-    singleGateSimulation();
+    //singleGateSimulation();
     nQubitGateSimulation();
 
     return 0;
