@@ -1,13 +1,4 @@
-#include <cuComplex.h>
-
-#include "error.cuh"
-#include "gate.cuh"
-#include "print_util.h"
-
-#define NUM_QUBITS 4
-#define THREAD_PER_BLOCK 256
-
-#define MAX_QUBITS_PER_SM 2
+#include "../include/cuda_main.cuh"
 
 __host__ __device__ inline int twoToThePower(int exp)
 {
@@ -194,7 +185,7 @@ void nQubitGateSimulation()
 
 int main()
 {
-    //singleGateSimulation();
+    singleGateSimulation();
     nQubitGateSimulation();
 
     return 0;

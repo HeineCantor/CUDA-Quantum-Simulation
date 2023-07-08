@@ -1,11 +1,4 @@
-#ifndef __PRINT_UTIL_H__
-#define __PRINT_UTIL_H__
-
-#include <iostream>
-#include <cuComplex.h>
-#include <bitset>
-
-using namespace std;
+#include "../include/print_util.cuh"
 
 void printGenericSimulationDetails(int numQubits)
 {
@@ -33,7 +26,7 @@ void printNQubitsSimulationDetails(int numQubits)
 
 }
 
-void printStateVector(cuDoubleComplex* vector, int vectorCount, int maxStatesToPrint = 0)
+void printStateVector(cuDoubleComplex* vector, int vectorCount, int maxStatesToPrint)
 {
     if(maxStatesToPrint == 0)
         maxStatesToPrint = vectorCount;
@@ -56,7 +49,7 @@ void printStateVector(cuDoubleComplex* vector, int vectorCount, int maxStatesToP
     cout << " ]" << endl;
 }
 
-void printQubitsState(cuDoubleComplex* vector, int qubitCount, int maxStatesToPrint = 0)
+void printQubitsState(cuDoubleComplex* vector, int qubitCount, int maxStatesToPrint)
 {
     int vectorCount = 1 << qubitCount;
 
@@ -75,5 +68,3 @@ void printQubitsState(cuDoubleComplex* vector, int qubitCount, int maxStatesToPr
         if(statesToPrint < vectorCount)
         cout << "..." << endl;
 }
-
-#endif

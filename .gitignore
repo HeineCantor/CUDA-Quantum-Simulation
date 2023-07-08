@@ -27,6 +27,8 @@
 *.lib
 
 # Executables
+bin
+./bin/*
 *.exe
 *.out
 *.app
@@ -34,3 +36,4 @@
 # VSCode
 .vscode
 ./.vscode/*
+
