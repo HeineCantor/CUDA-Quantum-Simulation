@@ -9,7 +9,7 @@ __global__ void single_X_kernel(cuDoubleComplex* stateVector, int statesNumber, 
 {
     int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if(threadIndex < statesNumber)
+    if(threadIndex < statesNumber / 2)
     {
         int xorOffset = (1 << qubit_index); //2^qubit_index
 
@@ -29,7 +29,7 @@ __global__ void single_Z_kernel(cuDoubleComplex* stateVector, int statesNumber, 
 {
     int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if(threadIndex < statesNumber)
+    if(threadIndex < statesNumber / 2)
     {
         int xorOffset = (1 << qubit_index); //2^qubit_index
 
@@ -49,7 +49,7 @@ __global__ void single_hadamard_kernel(cuDoubleComplex* stateVector, int statesN
 {
     int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if(threadIndex < statesNumber)
+    if(threadIndex < statesNumber / 2)
     {
         int xorOffset = (1 << qubit_index); //2^qubit_index
 
@@ -101,7 +101,7 @@ void singleGateSimulation()
     CHKERR( cudaMemcpy(hostStateVector, deviceStateVector, stateVectorSize, cudaMemcpyDeviceToHost) );
     CHKERR( cudaFree(deviceStateVector) );
 
-    printStateVector(hostStateVector, statesNumber, 4);
+    printStateVector(hostStateVector, statesNumber);
 
     free(hostStateVector);
 }
@@ -224,8 +224,8 @@ void nQubitGateSimulation()
 
 int main()
 {
-    //singleGateSimulation();
-    nQubitGateSimulation();
+    singleGateSimulation();
+    //nQubitGateSimulation();
 
     return 0;
 }
