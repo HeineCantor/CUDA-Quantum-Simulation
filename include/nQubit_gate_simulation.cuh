@@ -8,13 +8,15 @@
 #include "print_util.cuh"
 #include "utils.cuh"
 
-#define NUM_QUBITS 8
-#define THREAD_PER_BLOCK 256
+#define NUM_QUBITS 24
+#define THREAD_PER_BLOCK 512
 
-#define MAX_QUBITS_PER_SM 4
+#define MAX_QUBITS_PER_SM 8
+#define COALESCING_PARTITION 4
 
 __global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector);
 __global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit);
+__global__ void coalesced_MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit, int m);
 
 void nQubitGateSimulation();
 

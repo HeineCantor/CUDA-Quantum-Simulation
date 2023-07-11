@@ -2,6 +2,10 @@
 
 void printGenericSimulationDetails(int numQubits)
 {
+    cout << endl;
+
+    cout << "======= STARTING SIMULATION =======" << endl;
+
     cout << "Qubit number: " << numQubits << endl;
     cout << "States number: " << (1 << numQubits) << endl;
 

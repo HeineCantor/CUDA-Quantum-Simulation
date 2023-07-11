@@ -8,10 +8,8 @@
 #include "print_util.cuh"
 #include "utils.cuh"
 
-#define NUM_QUBITS 8
-#define THREAD_PER_BLOCK 256
-
-#define MAX_QUBITS_PER_SM 4
+#define NUM_QUBITS 24
+#define THREAD_PER_BLOCK 512
 
 __global__ void single_X_kernel(cuDoubleComplex* stateVector, int statesNumber, int qubit_index);
 __global__ void single_CNOT_kernel(cuDoubleComplex* stateVector, int statesNumber, int qubit_controlled, int qubit_controller);

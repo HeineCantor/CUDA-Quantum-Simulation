@@ -98,6 +98,14 @@ void singleGateSimulation()
 
     cuDoubleComplex* deviceStateVector = NULL;
 
+    cudaEvent_t start, stop;
+    float mainStreamElapsedTime;
+
+    CHKERR( cudaEventCreate(&start) );
+    CHKERR( cudaEventCreate(&stop) );
+
+    CHKERR( cudaEventRecord( start, 0 ) );
+
     CHKERR( cudaMalloc((void**)& deviceStateVector, stateVectorSize) );
 
     // Initializing the state vector with the state |000...0>, a.k.a. the state vector [ 1 0 0 ... 0 ]
@@ -108,15 +116,25 @@ void singleGateSimulation()
 
     //single_Z_kernel<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, statesNumber, 0);
 
-    single_hadamard_kernel<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, statesNumber, 0);
-    single_hadamard_kernel<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, statesNumber, 1);
+    for(int i = 0; i < NUM_QUBITS; i++)
+        single_hadamard_kernel<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, statesNumber, i);
 
     CHKERR( cudaPeekAtLastError() ); 
 
     CHKERR( cudaMemcpy(hostStateVector, deviceStateVector, stateVectorSize, cudaMemcpyDeviceToHost) );
+    
+    CHKERR( cudaEventRecord( stop, 0 ) );
+
+	CHKERR( cudaEventSynchronize( stop ) );
+	CHKERR( cudaEventElapsedTime( &mainStreamElapsedTime, start, stop ) );
+	CHKERR( cudaEventDestroy( start ) );
+	CHKERR( cudaEventDestroy( stop ) );
+
     CHKERR( cudaFree(deviceStateVector) );
 
-    printStateVector(hostStateVector, statesNumber);
+    //printStateVector(hostStateVector, statesNumber, 4);
+
+    cout << "Simulation elapsed time: " << mainStreamElapsedTime <<  " ms." << endl;
 
     free(hostStateVector);
 }
