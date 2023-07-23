@@ -238,7 +238,7 @@ void nQubitGateSimulation(int numQubits, bool sharedMemoryOpt, bool coalescingOp
                     howManyQubits = numQubits - startingQubit;
                 }
 
-                MSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit);
+                MSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit, howManyQubits);
 
                 CHKERR( cudaPeekAtLastError() );
             }
