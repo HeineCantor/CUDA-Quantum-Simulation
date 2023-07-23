@@ -80,15 +80,15 @@ __global__ void single_hadamard_kernel(cuDoubleComplex* stateVector, int statesN
     }
 }
 
-void singleGateSimulation()
+void singleGateSimulation(int numQubits)
 {
-    int statesNumber = twoToThePower(NUM_QUBITS);
+    int statesNumber = twoToThePower(numQubits);
     int stateVectorSize = sizeof(cuDoubleComplex) * statesNumber;
 
     int requiredThreads = statesNumber / 2;
     int blockNumber = (requiredThreads + THREAD_PER_BLOCK - 1) / THREAD_PER_BLOCK;
 
-    printSingleQubitSimulationDetails(NUM_QUBITS, requiredThreads, blockNumber);
+    printSingleQubitSimulationDetails(numQubits, requiredThreads, blockNumber);
 
     cuDoubleComplex unitaryComplex;
     unitaryComplex.x = 1;
@@ -116,7 +116,7 @@ void singleGateSimulation()
 
     //single_Z_kernel<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, statesNumber, 0);
 
-    for(int i = 0; i < NUM_QUBITS; i++)
+    for(int i = 0; i < numQubits; i++)
         single_hadamard_kernel<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, statesNumber, i);
 
     CHKERR( cudaPeekAtLastError() ); 
