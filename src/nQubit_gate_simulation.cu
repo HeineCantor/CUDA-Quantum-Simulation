@@ -97,10 +97,11 @@ __global__ void MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int start
 {
     __shared__ cuDoubleComplex subCoefficients[1 << MAX_QUBITS_PER_SM];
 
-    int threadIndex = threadIdx.x;
-    int kIndex = blockIdx.x;    // blockIndex = k coefficient
-
+    int maxCoefficientsPerSM = twoToThePower(MAX_QUBITS_PER_SM);
     int twoToTheQ = twoToThePower(startingQubit);
+
+    int threadIndex = threadIdx.x;
+    int kIndex = (blockIdx.x % twoToTheQ) + (blockIdx.x / twoToTheQ) * twoToTheQ * twoToThePower(MAX_QUBITS_PER_SM);
 
     if(threadIndex < twoToThePower(MAX_QUBITS_PER_SM))
         subCoefficients[threadIndex] = stateVector[kIndex ^ (twoToTheQ * threadIndex)];
@@ -135,7 +136,7 @@ __global__ void coalesced_MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector,
 {
     __shared__ cuDoubleComplex subCoefficients[1 << MAX_QUBITS_PER_SM];
 
-    int M = 1 << m;
+    int M = twoToThePower(m);
 
     int threadIndex = threadIdx.x;
     int blockIndex = twoToThePower(MAX_QUBITS_PER_SM) / M * blockIdx.x;
@@ -237,7 +238,7 @@ void nQubitGateSimulation(int numQubits, bool sharedMemoryOpt, bool coalescingOp
                     howManyQubits = numQubits - startingQubit;
                 }
 
-                MSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit, howManyQubits);
+                MSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit);
 
                 CHKERR( cudaPeekAtLastError() );
             }
@@ -273,12 +274,14 @@ void nQubitGateSimulation(int numQubits, bool sharedMemoryOpt, bool coalescingOp
             int startingQubit = MAX_QUBITS_PER_SM * (i+1);
 
             if(!coalescingOpt)
+            {
                 MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit);
+            }
             else
             {
                 coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit, m);
                 CHKERR( cudaPeekAtLastError() );
-                
+
                 coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit + m, m);
             }
 

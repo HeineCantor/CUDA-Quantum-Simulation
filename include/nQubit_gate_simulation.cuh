@@ -13,11 +13,11 @@
 #define DEFAULT_SHARED_MEMORY_OPT 0
 #define DEFAULT_COALESCING_OPT 0
 
-#define MAX_QUBITS_PER_BLOCK 11 // 2 ^ (11 - 1) = 1024
+#define MAX_QUBITS_PER_BLOCK 10
 #define MAX_THREADS_PER_BLOCK 1 << (MAX_QUBITS_PER_BLOCK - 1)
 
-#define MAX_QUBITS_PER_SM 8
-#define COALESCING_PARTITION 4
+#define MAX_QUBITS_PER_SM 10
+#define COALESCING_PARTITION 5
 
 __global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector, int halfQubits);
 __global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit);
