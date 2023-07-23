@@ -83,12 +83,14 @@ __global__ void single_hadamard_kernel(cuDoubleComplex* stateVector, int statesN
 void singleGateSimulation(int numQubits)
 {
     int statesNumber = twoToThePower(numQubits);
-    int stateVectorSize = sizeof(cuDoubleComplex) * statesNumber;
+    unsigned long int stateVectorSize = sizeof(cuDoubleComplex) * statesNumber;
 
     int requiredThreads = statesNumber / 2;
     int blockNumber = (requiredThreads + THREAD_PER_BLOCK - 1) / THREAD_PER_BLOCK;
 
     printSingleQubitSimulationDetails(numQubits, requiredThreads, blockNumber);
+
+    cout << "STATE VECTOR SIZE: " << stateVectorSize << endl;
 
     cuDoubleComplex unitaryComplex;
     unitaryComplex.x = 1;
@@ -132,7 +134,7 @@ void singleGateSimulation(int numQubits)
 
     CHKERR( cudaFree(deviceStateVector) );
 
-    printStateVector(hostStateVector, statesNumber, 10);
+    //printStateVector(hostStateVector, statesNumber, 10);
 
     cout << "Simulation elapsed time: " << mainStreamElapsedTime <<  " ms." << endl;
 

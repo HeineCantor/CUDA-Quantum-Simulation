@@ -132,27 +132,27 @@ __global__ void MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int start
         stateVector[kIndex ^ (twoToTheQ * threadIndex)] = subCoefficients[threadIndex];
 }
 
-__global__ void coalesced_MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int startingQubit, int m)
+__global__ void coalesced_MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int startingQubit, int m, int howManyQubits)
 {
-    __shared__ cuDoubleComplex subCoefficients[1 << MAX_QUBITS_PER_SM];
+    extern __shared__ cuDoubleComplex subCoefficients[];
 
     int M = twoToThePower(m);
 
     int threadIndex = threadIdx.x;
-    int blockIndex = twoToThePower(MAX_QUBITS_PER_SM) / M * blockIdx.x;
+    int blockIndex = twoToThePower(howManyQubits) / M * blockIdx.x;
 
     int twoToTheQ = twoToThePower(startingQubit);
 
     int kIndex = (blockIndex % twoToTheQ) + (blockIndex / twoToTheQ) * twoToTheQ * M;
 
-    if(threadIndex < twoToThePower(MAX_QUBITS_PER_SM))
+    if(threadIndex < twoToThePower(howManyQubits))
         subCoefficients[threadIndex] = stateVector[(kIndex + threadIndex / M) ^ twoToTheQ * (threadIndex % M)];
  
     for(int i = 0; i < m; i++)
     {
         __syncthreads();
 
-        if(threadIndex < twoToThePower(MAX_QUBITS_PER_SM - 1))
+        if(threadIndex < twoToThePower(howManyQubits - 1))
         {
             int xorOffset = (1 << i); //2^qubit_index
 
@@ -170,14 +170,17 @@ __global__ void coalesced_MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector,
 
     __syncthreads();
 
-    if(threadIndex < twoToThePower(MAX_QUBITS_PER_SM))
+    if(threadIndex < twoToThePower(howManyQubits))
         stateVector[(kIndex + threadIndex / M) ^ twoToTheQ * (threadIndex % M)] = subCoefficients[threadIndex];
 }
 
-void nQubitGateSimulation(int numQubits, bool sharedMemoryOpt, bool coalescingOpt)
+void nQubitGateSimulation(int numQubits, int sharedMemoryOpt, int coalescingOpt)
 {
     int statesNumber = twoToThePower(numQubits);
-    int stateVectorSize = sizeof(cuDoubleComplex) * statesNumber;
+    unsigned long int stateVectorSize = sizeof(cuDoubleComplex) * statesNumber;
+
+    bool sharedMemoryEnabled = sharedMemoryOpt > 0;
+    bool coalescingOptimizationEnabled = coalescingOpt > 0;
 
     int m = COALESCING_PARTITION;
     int iterationsForMSBs;
@@ -185,7 +188,7 @@ void nQubitGateSimulation(int numQubits, bool sharedMemoryOpt, bool coalescingOp
     int blockNumber = sharedMemoryOpt ? twoToThePower(numQubits - MAX_QUBITS_PER_SM) : twoToThePower(numQubits / 2);
     int threadsPerBlock;
 
-    printNQubitsSimulationDetails(numQubits, blockNumber, sharedMemoryOpt, coalescingOpt);
+    printNQubitsSimulationDetails(numQubits, blockNumber, sharedMemoryEnabled, coalescingOptimizationEnabled);
 
     cuDoubleComplex unitaryComplex;
     unitaryComplex.x = 1;
@@ -210,7 +213,7 @@ void nQubitGateSimulation(int numQubits, bool sharedMemoryOpt, bool coalescingOp
     CHKERR( cudaMemcpy(deviceStateVector, &unitaryComplex, sizeof(cuDoubleComplex), cudaMemcpyHostToDevice) ); 
 
 
-    if(!sharedMemoryOpt)
+    if(!sharedMemoryEnabled)
     {
         int halfQubits = numQubits / 2;
         threadsPerBlock = twoToThePower(halfQubits - 1);
@@ -274,25 +277,41 @@ void nQubitGateSimulation(int numQubits, bool sharedMemoryOpt, bool coalescingOp
             int startingQubit = MAX_QUBITS_PER_SM * (i+1);
             int howManyQubits = MAX_QUBITS_PER_SM;
 
-            if(i == iterationsForMSBs - 1) // if last iteration
+            if(!coalescingOptimizationEnabled)
             {
-                blockNumber = twoToThePower(startingQubit);
-                howManyQubits = numQubits - startingQubit;
-            }
+                if(i == iterationsForMSBs - 1) // if last iteration
+                {
+                    blockNumber = twoToThePower(startingQubit);
+                    howManyQubits = numQubits - startingQubit;
+                }
 
-            if(!coalescingOpt)
-            {
                 MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock, sizeof(cuDoubleComplex) * twoToThePower(howManyQubits)>>>(deviceStateVector, startingQubit, howManyQubits);
+                CHKERR( cudaPeekAtLastError() );
             }
             else
             {
-                coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit, m);
-                CHKERR( cudaPeekAtLastError() );
+                if(i == iterationsForMSBs - 1) // if last iteration
+                {
+                    m = (numQubits - startingQubit) / 2;
 
-                coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit + m, m);
+                    blockNumber = twoToThePower(numQubits - m);
+                    howManyQubits = m;
+
+                    coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock, sizeof(cuDoubleComplex) * twoToThePower(howManyQubits)>>>(deviceStateVector, startingQubit, m, howManyQubits);
+                    CHKERR( cudaPeekAtLastError() );
+
+                    coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock, sizeof(cuDoubleComplex) * twoToThePower(howManyQubits)>>>(deviceStateVector, startingQubit + m, numQubits - startingQubit - m, numQubits - startingQubit - m);
+                    CHKERR( cudaPeekAtLastError() );
+                }
+                else
+                {
+                    coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock, sizeof(cuDoubleComplex) * twoToThePower(howManyQubits)>>>(deviceStateVector, startingQubit, m, howManyQubits);
+                    CHKERR( cudaPeekAtLastError() );
+
+                    coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock, sizeof(cuDoubleComplex) * twoToThePower(howManyQubits)>>>(deviceStateVector, startingQubit + m, MAX_QUBITS_PER_SM - m, howManyQubits);
+                    CHKERR( cudaPeekAtLastError() );
+                }
             }
-
-            CHKERR( cudaPeekAtLastError() );
         }
     }
 
@@ -309,7 +328,7 @@ void nQubitGateSimulation(int numQubits, bool sharedMemoryOpt, bool coalescingOp
 
     CHKERR( cudaFree(deviceStateVector) );
 
-    printStateVector(hostStateVector, statesNumber, 10);
+    //printStateVector(hostStateVector, statesNumber, 10);
     //printQubitsState(hostStateVector, NUM_QUBITS);
 
     cout << "Simulation elapsed time: " << mainStreamElapsedTime <<  " ms." << endl;

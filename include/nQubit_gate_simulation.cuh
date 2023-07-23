@@ -16,7 +16,7 @@
 #define MAX_QUBITS_PER_BLOCK 10
 #define MAX_THREADS_PER_BLOCK 1 << (MAX_QUBITS_PER_BLOCK - 1)
 
-#define MAX_QUBITS_PER_SM 9
+#define MAX_QUBITS_PER_SM 10
 #define COALESCING_PARTITION 4
 
 __global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector, int halfQubits);
@@ -31,6 +31,6 @@ __global__ void coalesced_MSB_nQubit_kernel(cuDoubleComplex* stateVector, int st
 /// @param numQubits        How many qubits to simulate
 /// @param sharedMemoryOpt  Option to make use of shared memory in kernels to optimize accesses
 /// @param coalescingOpt    Option to make use of coalescing optimizations for MSB kernel
-void nQubitGateSimulation(int numQubits = DEFAULT_NUM_QUBITS, bool sharedMemoryOpt = DEFAULT_SHARED_MEMORY_OPT, bool coalescingOpt = DEFAULT_COALESCING_OPT);
+void nQubitGateSimulation(int numQubits = DEFAULT_NUM_QUBITS, int sharedMemoryOpt = 0, int coalescingOpt = 0);
 
 #endif
