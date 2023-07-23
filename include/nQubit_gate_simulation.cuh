@@ -16,14 +16,14 @@
 #define MAX_QUBITS_PER_BLOCK 10
 #define MAX_THREADS_PER_BLOCK 1 << (MAX_QUBITS_PER_BLOCK - 1)
 
-#define MAX_QUBITS_PER_SM 10
-#define COALESCING_PARTITION 5
+#define MAX_QUBITS_PER_SM 9
+#define COALESCING_PARTITION 4
 
 __global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector, int halfQubits);
 __global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit, int howManyQubits);
 
 __global__ void LSB_nQubit_kernel_shared(cuDoubleComplex* stateVector);
-__global__ void MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int startingQubit);
+__global__ void MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int startingQubit, int howManyQubits);
 
 __global__ void coalesced_MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit, int m);
 
