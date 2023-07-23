@@ -268,8 +268,6 @@ void nQubitGateSimulation(int numQubits, bool sharedMemoryOpt, bool coalescingOp
 
         iterationsForMSBs = (numQubits + MAX_QUBITS_PER_SM - 1) / MAX_QUBITS_PER_SM - 1;
 
-        cout << "How many iterations: " << iterationsForMSBs << endl;
-
         for(int i = 0; i < iterationsForMSBs; i++)
         {
             int startingQubit = MAX_QUBITS_PER_SM * (i+1);
@@ -279,8 +277,12 @@ void nQubitGateSimulation(int numQubits, bool sharedMemoryOpt, bool coalescingOp
             else
             {
                 coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit, m);
+                CHKERR( cudaPeekAtLastError() );
+                
                 coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit + m, m);
             }
+
+            CHKERR( cudaPeekAtLastError() );
         }
     }
 
