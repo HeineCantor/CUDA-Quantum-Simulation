@@ -18,17 +18,20 @@ void printSingleQubitSimulationDetails(int numQubits, int threadNumber, int bloc
 
     cout << "======= SIMULATION FOR ONE QUBIT GATE =======" << endl;
     cout << "Required Thread number: " << threadNumber << endl;
-    cout << "Required Blocks number: " << blockNumber << endl;
+    cout << "Required Blocks number: " << blockNumber << endl << endl;
 
     cout << endl;
 }
 
-void printNQubitsSimulationDetails(int numQubits, int blockNumber)
+void printNQubitsSimulationDetails(int numQubits, int blockNumber, bool sharedMemoryOptimization, bool coalescingOptimization)
 {
     printGenericSimulationDetails(numQubits);
 
     cout << "======= SIMULATION FOR AN N-QUBIT GATE =======" << endl;
     cout << "Required Blocks number: " << blockNumber << endl;
+
+    cout << "Shared Memory Optimization: " << sharedMemoryOptimization << endl;
+    cout << "Coalescing Optimization: " << coalescingOptimization << endl;
 
     cout << endl;
 }
