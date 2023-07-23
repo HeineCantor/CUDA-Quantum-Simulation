@@ -20,7 +20,7 @@
 #define COALESCING_PARTITION 5
 
 __global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector, int halfQubits);
-__global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit);
+__global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit, int howManyQubits);
 
 __global__ void LSB_nQubit_kernel_shared(cuDoubleComplex* stateVector);
 __global__ void MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int startingQubit);
