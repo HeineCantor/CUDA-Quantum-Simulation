@@ -8,7 +8,7 @@
 #include "print_util.cuh"
 #include "utils.cuh"
 
-#define NUM_QUBITS 24
+#define NUM_QUBITS 26
 #define THREAD_PER_BLOCK 512
 
 __global__ void single_X_kernel(cuDoubleComplex* stateVector, int statesNumber, int qubit_index);

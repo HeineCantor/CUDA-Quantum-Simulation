@@ -26,20 +26,18 @@ __global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector, int halfQubits)
     }
 }
 
-__global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit)
+__global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit, int howManyQubits)
 {
     int threadIndex = threadIdx.x;
     int kIndex = blockIdx.x;    // blockIndex = k coefficient
 
     int twoToTheQ = twoToThePower(startingQubit);
 
-    int halfQubits = startingQubit; // starting from half of qubits, they're the same
-
-    for(int i = 0; i < halfQubits; i++)
+    for(int i = 0; i < howManyQubits; i++)
     {
         __syncthreads();
 
-        if(threadIndex < twoToThePower(halfQubits - 1))
+        if(threadIndex < twoToThePower(howManyQubits - 1))
         {
             int xorOffset = (1 << i); //2^qubit_index
 
@@ -175,16 +173,18 @@ __global__ void coalesced_MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector,
         stateVector[(kIndex + threadIndex / M) ^ twoToTheQ * (threadIndex % M)] = subCoefficients[threadIndex];
 }
 
-void nQubitGateSimulation()
+void nQubitGateSimulation(int numQubits, bool sharedMemoryOpt, bool coalescingOpt)
 {
-    int statesNumber = twoToThePower(NUM_QUBITS);
+    int statesNumber = twoToThePower(numQubits);
     int stateVectorSize = sizeof(cuDoubleComplex) * statesNumber;
 
     int m = COALESCING_PARTITION;
+    int iterationsForMSBs;
 
-    int blockNumber = SHARED_MEMORY_OPT ? twoToThePower(NUM_QUBITS - MAX_QUBITS_PER_SM) : twoToThePower(NUM_QUBITS / 2);
+    int blockNumber = sharedMemoryOpt ? twoToThePower(numQubits - MAX_QUBITS_PER_SM) : twoToThePower(numQubits / 2);
+    int threadsPerBlock;
 
-    printNQubitsSimulationDetails(NUM_QUBITS, blockNumber, SHARED_MEMORY_OPT, COALESCING_OPT);
+    printNQubitsSimulationDetails(numQubits, blockNumber, sharedMemoryOpt, coalescingOpt);
 
     cuDoubleComplex unitaryComplex;
     unitaryComplex.x = 1;
@@ -209,28 +209,64 @@ void nQubitGateSimulation()
     CHKERR( cudaMemcpy(deviceStateVector, &unitaryComplex, sizeof(cuDoubleComplex), cudaMemcpyHostToDevice) ); 
 
 
-    if(!SHARED_MEMORY_OPT)
+    if(!sharedMemoryOpt)
     {
-        // LSB Kernel Call
-        LSB_nQubit_kernel<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, NUM_QUBITS / 2);
+        int halfQubits = numQubits / 2;
+        threadsPerBlock = twoToThePower(halfQubits - 1);
 
-        CHKERR( cudaPeekAtLastError() );
+        if(threadsPerBlock > MAX_THREADS_PER_BLOCK) // In this case, you'll have to make more MSB kernel calls
+        {
+            iterationsForMSBs = (numQubits + MAX_QUBITS_PER_BLOCK - 1) / MAX_QUBITS_PER_BLOCK - 1;
+            threadsPerBlock = MAX_THREADS_PER_BLOCK;
+            blockNumber = numQubits - MAX_QUBITS_PER_BLOCK;
 
-        // MSB Kernel Call
-        MSB_nQubit_kernel<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, NUM_QUBITS / 2);
+            cout << "THREADS PER BLOCK: " << threadsPerBlock << endl;
 
-        CHKERR( cudaPeekAtLastError() );
+            LSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, MAX_QUBITS_PER_BLOCK);
+
+            CHKERR( cudaPeekAtLastError() );
+
+            for(int i = 0; i < iterationsForMSBs; i++)
+            {
+                int startingQubit = MAX_QUBITS_PER_BLOCK * (i+1);
+                int howManyQubits = MAX_QUBITS_PER_BLOCK;
+
+                if(i == iterationsForMSBs - 1) // if last iteration
+                {
+                    blockNumber = twoToThePower(startingQubit);
+                    howManyQubits = numQubits - startingQubit;
+                }
+
+                MSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit, howManyQubits);
+
+                CHKERR( cudaPeekAtLastError() );
+            }
+        }
+        else
+        {
+            // LSB Kernel Call
+            LSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, halfQubits);
+
+            CHKERR( cudaPeekAtLastError() );
+
+            // MSB Kernel Call
+            MSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, halfQubits, halfQubits);
+
+            CHKERR( cudaPeekAtLastError() );
+        }
     }
     else
     {
+        threadsPerBlock = twoToThePower(MAX_QUBITS_PER_SM);
+
         // LSB Kernel Call
-        LSB_nQubit_kernel_shared<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector);
+        LSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector);
 
         CHKERR( cudaPeekAtLastError() );
 
         // MSB Kernel Call
 
-        int iterationsForMSBs = (NUM_QUBITS + MAX_QUBITS_PER_SM - 1) / MAX_QUBITS_PER_SM - 1;
+        iterationsForMSBs = (numQubits + MAX_QUBITS_PER_SM - 1) / MAX_QUBITS_PER_SM - 1;
 
         cout << "How many iterations: " << iterationsForMSBs << endl;
 
@@ -238,12 +274,12 @@ void nQubitGateSimulation()
         {
             int startingQubit = MAX_QUBITS_PER_SM * (i+1);
 
-            if(!COALESCING_OPT)
-                MSB_nQubit_kernel_shared<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, startingQubit);
+            if(!coalescingOpt)
+                MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit);
             else
             {
-                coalesced_MSB_nQubit_kernel_shared<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, startingQubit, m);
-                coalesced_MSB_nQubit_kernel_shared<<<blockNumber, THREAD_PER_BLOCK>>>(deviceStateVector, startingQubit + m, m);
+                coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit, m);
+                coalesced_MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit + m, m);
             }
         }
     }
@@ -261,7 +297,7 @@ void nQubitGateSimulation()
 
     CHKERR( cudaFree(deviceStateVector) );
 
-    //printStateVector(hostStateVector, statesNumber);
+    printStateVector(hostStateVector, statesNumber, 10);
     //printQubitsState(hostStateVector, NUM_QUBITS);
 
     cout << "Simulation elapsed time: " << mainStreamElapsedTime <<  " ms." << endl;

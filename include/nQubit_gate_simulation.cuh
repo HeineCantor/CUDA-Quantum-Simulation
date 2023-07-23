@@ -8,19 +8,29 @@
 #include "print_util.cuh"
 #include "utils.cuh"
 
-#define NUM_QUBITS 20
-#define THREAD_PER_BLOCK 512
+#define DEFAULT_NUM_QUBITS 16
 
-#define SHARED_MEMORY_OPT 1
-#define COALESCING_OPT 1
+#define DEFAULT_SHARED_MEMORY_OPT 0
+#define DEFAULT_COALESCING_OPT 0
 
-#define MAX_QUBITS_PER_SM 10
-#define COALESCING_PARTITION 5
+#define MAX_QUBITS_PER_BLOCK 11 // 2 ^ (11 - 1) = 1024
+#define MAX_THREADS_PER_BLOCK 1 << (MAX_QUBITS_PER_BLOCK - 1)
 
-__global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector);
+#define MAX_QUBITS_PER_SM 8
+#define COALESCING_PARTITION 4
+
+__global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector, int halfQubits);
 __global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit);
+
+__global__ void LSB_nQubit_kernel_shared(cuDoubleComplex* stateVector);
+__global__ void MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int startingQubit);
+
 __global__ void coalesced_MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit, int m);
 
-void nQubitGateSimulation();
+/// @brief Starts the simulation of a factorizable n Qubits Gate (an Hadamard layer)
+/// @param numQubits        How many qubits to simulate
+/// @param sharedMemoryOpt  Option to make use of shared memory in kernels to optimize accesses
+/// @param coalescingOpt    Option to make use of coalescing optimizations for MSB kernel
+void nQubitGateSimulation(int numQubits = DEFAULT_NUM_QUBITS, bool sharedMemoryOpt = DEFAULT_SHARED_MEMORY_OPT, bool coalescingOpt = DEFAULT_COALESCING_OPT);
 
 #endif

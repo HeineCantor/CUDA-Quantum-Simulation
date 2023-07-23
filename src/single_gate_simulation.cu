@@ -132,7 +132,7 @@ void singleGateSimulation()
 
     CHKERR( cudaFree(deviceStateVector) );
 
-    //printStateVector(hostStateVector, statesNumber, 4);
+    printStateVector(hostStateVector, statesNumber, 10);
 
     cout << "Simulation elapsed time: " << mainStreamElapsedTime <<  " ms." << endl;
 
