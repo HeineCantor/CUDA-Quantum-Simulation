@@ -222,7 +222,7 @@ void nQubitGateSimulation(int numQubits, int sharedMemoryOpt, int coalescingOpt)
         {
             iterationsForMSBs = (numQubits + MAX_QUBITS_PER_BLOCK - 1) / MAX_QUBITS_PER_BLOCK - 1;
             threadsPerBlock = MAX_THREADS_PER_BLOCK;
-            blockNumber = numQubits - MAX_QUBITS_PER_BLOCK;
+            blockNumber = twoToThePower(numQubits - MAX_QUBITS_PER_BLOCK);
 
             cout << "THREADS PER BLOCK: " << threadsPerBlock << endl;
 
@@ -328,7 +328,7 @@ void nQubitGateSimulation(int numQubits, int sharedMemoryOpt, int coalescingOpt)
 
     CHKERR( cudaFree(deviceStateVector) );
 
-    //printStateVector(hostStateVector, statesNumber, 10);
+    printStateVector(hostStateVector, statesNumber, 10);
     //printQubitsState(hostStateVector, NUM_QUBITS);
 
     cout << "Simulation elapsed time: " << mainStreamElapsedTime <<  " ms." << endl;

@@ -4,7 +4,8 @@
 int main()
 {
     singleGateSimulation(26);
-    nQubitGateSimulation(26, 0, 0);
+    nQubitGateSimulation(26, 10, 0);
+    
 
     return 0;
 }
