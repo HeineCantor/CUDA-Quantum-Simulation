@@ -22,7 +22,7 @@
 __global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector, int howManyQubits);
 __global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit, int howManyQubits);
 
-__global__ void LSB_nQubit_kernel_shared(cuDoubleComplex* stateVector);
+__global__ void LSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int howManyQubits);
 __global__ void MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int startingQubit, int howManyQubits);
 
 __global__ void coalesced_MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit, int m);

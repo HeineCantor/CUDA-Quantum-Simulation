@@ -57,21 +57,21 @@ __global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubi
     }
 }
 
-__global__ void LSB_nQubit_kernel_shared(cuDoubleComplex* stateVector)
+__global__ void LSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int howManyQubits)
 {
-    __shared__ cuDoubleComplex subCoefficients[1 << MAX_QUBITS_PER_SM];
+    extern __shared__ cuDoubleComplex subCoefficients[];
 
     int threadIndex = threadIdx.x;
-    int kIndex = blockIdx.x * twoToThePower(MAX_QUBITS_PER_SM);    // blockIndex -> k coefficient
+    int kIndex = blockIdx.x * twoToThePower(howManyQubits);    // blockIndex -> k coefficient
 
-    if(threadIndex < twoToThePower(MAX_QUBITS_PER_SM))
+    if(threadIndex < twoToThePower(howManyQubits))
         subCoefficients[threadIndex] = stateVector[kIndex ^ threadIndex];
 
-    for(int i = 0; i < MAX_QUBITS_PER_SM; i++)
+    for(int i = 0; i < howManyQubits; i++)
     {
         __syncthreads();
 
-        if(threadIndex < twoToThePower(MAX_QUBITS_PER_SM - 1))
+        if(threadIndex < twoToThePower(howManyQubits - 1))
         {
             int xorOffset = (1 << i); //2^qubit_index
 
@@ -89,7 +89,7 @@ __global__ void LSB_nQubit_kernel_shared(cuDoubleComplex* stateVector)
 
     __syncthreads();
 
-    if(threadIndex < twoToThePower(MAX_QUBITS_PER_SM))
+    if(threadIndex < twoToThePower(howManyQubits))
         stateVector[kIndex ^ threadIndex] = subCoefficients[threadIndex];
 }
 
@@ -179,6 +179,8 @@ void nQubitGateSimulation(int numQubits, int sharedMemoryOpt, int coalescingOpt)
     int statesNumber = twoToThePower(numQubits);
     unsigned long int stateVectorSize = sizeof(cuDoubleComplex) * statesNumber;
 
+    int howManyQubits;
+
     bool sharedMemoryEnabled = sharedMemoryOpt > 0;
     bool coalescingOptimizationEnabled = coalescingOpt > 0;
 
@@ -216,7 +218,7 @@ void nQubitGateSimulation(int numQubits, int sharedMemoryOpt, int coalescingOpt)
     if(!sharedMemoryEnabled)
     {
         int halfQubits = numQubits / 2;
-        int howManyQubits = MAX_QUBITS_PER_BLOCK;
+        howManyQubits = MAX_QUBITS_PER_BLOCK;
         threadsPerBlock = twoToThePower(halfQubits - 1);
 
         if(threadsPerBlock > MAX_THREADS_PER_BLOCK)
@@ -248,28 +250,33 @@ void nQubitGateSimulation(int numQubits, int sharedMemoryOpt, int coalescingOpt)
     }
     else
     {
-        threadsPerBlock = twoToThePower(MAX_QUBITS_PER_SM);
+        iterationsForMSBs = (numQubits + MAX_QUBITS_PER_SM - 1) / MAX_QUBITS_PER_SM - 1;
+        howManyQubits = numQubits / (iterationsForMSBs + 1) + 1;
+
+        blockNumber = twoToThePower(numQubits - howManyQubits);
+        threadsPerBlock = twoToThePower(howManyQubits);
+
+        cout <<  "HOW MANY ITERATIONS " << iterationsForMSBs << " FOR QUBITS " << howManyQubits << endl;
 
         // LSB Kernel Call
-        LSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock>>>(deviceStateVector);
+        LSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock, sizeof(cuDoubleComplex) * twoToThePower(howManyQubits)>>>(deviceStateVector, howManyQubits);
 
         CHKERR( cudaPeekAtLastError() );
 
         // MSB Kernel Call
 
-        iterationsForMSBs = (numQubits + MAX_QUBITS_PER_SM - 1) / MAX_QUBITS_PER_SM - 1;
-
         for(int i = 0; i < iterationsForMSBs; i++)
         {
-            int startingQubit = MAX_QUBITS_PER_SM * (i+1);
-            int howManyQubits = MAX_QUBITS_PER_SM;
+            int startingQubit = howManyQubits * (i+1);
 
             if(!coalescingOptimizationEnabled)
             {
+                
                 if(i == iterationsForMSBs - 1) // if last iteration
                 {
                     blockNumber = twoToThePower(startingQubit);
                     howManyQubits = numQubits - startingQubit;
+                    threadsPerBlock = twoToThePower(howManyQubits);
                 }
 
                 MSB_nQubit_kernel_shared<<<blockNumber, threadsPerBlock, sizeof(cuDoubleComplex) * twoToThePower(howManyQubits)>>>(deviceStateVector, startingQubit, howManyQubits);

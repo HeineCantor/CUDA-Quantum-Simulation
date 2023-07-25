@@ -3,8 +3,9 @@
 
 int main()
 {
-    singleGateSimulation(26);
-    nQubitGateSimulation(26, 10, 0);
+    //singleGateSimulation(26);
+    nQubitGateSimulation(26, 0, 0);
+    nQubitGateSimulation(26, 9, 0);
     
 
     return 0;
