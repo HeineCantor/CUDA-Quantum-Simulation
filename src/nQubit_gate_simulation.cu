@@ -29,9 +29,9 @@ __global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector, int halfQubits)
 __global__ void MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit, int howManyQubits)
 {
     int threadIndex = threadIdx.x;
-    int kIndex = blockIdx.x;    // blockIndex = k coefficient
-
     int twoToTheQ = twoToThePower(startingQubit);
+
+    int kIndex = (blockIdx.x % twoToTheQ) + (blockIdx.x / twoToTheQ) * twoToTheQ * twoToThePower(howManyQubits);    // blockIndex = k coefficient
 
     for(int i = 0; i < howManyQubits; i++)
     {
@@ -216,45 +216,32 @@ void nQubitGateSimulation(int numQubits, int sharedMemoryOpt, int coalescingOpt)
     if(!sharedMemoryEnabled)
     {
         int halfQubits = numQubits / 2;
+        int howManyQubits = MAX_QUBITS_PER_BLOCK;
         threadsPerBlock = twoToThePower(halfQubits - 1);
 
-        if(threadsPerBlock > MAX_THREADS_PER_BLOCK) // In this case, you'll have to make more MSB kernel calls
-        {
-            iterationsForMSBs = (numQubits + MAX_QUBITS_PER_BLOCK - 1) / MAX_QUBITS_PER_BLOCK - 1;
+        if(threadsPerBlock > MAX_THREADS_PER_BLOCK)
             threadsPerBlock = MAX_THREADS_PER_BLOCK;
-            blockNumber = twoToThePower(numQubits - MAX_QUBITS_PER_BLOCK);
 
-            cout << "THREADS PER BLOCK: " << threadsPerBlock << endl;
+        iterationsForMSBs = (numQubits + MAX_QUBITS_PER_BLOCK - 1) / MAX_QUBITS_PER_BLOCK - 1;
+        howManyQubits = numQubits / (iterationsForMSBs + 1) + 1;
 
-            LSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, MAX_QUBITS_PER_BLOCK);
+        blockNumber = twoToThePower(numQubits - howManyQubits);
 
-            CHKERR( cudaPeekAtLastError() );
+        LSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, howManyQubits);
 
-            for(int i = 0; i < iterationsForMSBs; i++)
-            {
-                int startingQubit = MAX_QUBITS_PER_BLOCK * (i+1);
-                int howManyQubits = MAX_QUBITS_PER_BLOCK;
+        CHKERR( cudaPeekAtLastError() );
 
-                if(i == iterationsForMSBs - 1) // if last iteration
-                {
-                    blockNumber = twoToThePower(startingQubit);
-                    howManyQubits = numQubits - startingQubit;
-                }
-
-                MSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit, howManyQubits);
-
-                CHKERR( cudaPeekAtLastError() );
-            }
-        }
-        else
+        for(int i = 0; i < iterationsForMSBs; i++)
         {
-            // LSB Kernel Call
-            LSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, halfQubits);
+            int startingQubit = howManyQubits * (i+1);
 
-            CHKERR( cudaPeekAtLastError() );
+            if(i == iterationsForMSBs - 1) // if last iteration
+            {
+                blockNumber = twoToThePower(startingQubit);
+                howManyQubits = numQubits - startingQubit;
+            }
 
-            // MSB Kernel Call
-            MSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, halfQubits, halfQubits);
+            MSB_nQubit_kernel<<<blockNumber, threadsPerBlock>>>(deviceStateVector, startingQubit, howManyQubits);
 
             CHKERR( cudaPeekAtLastError() );
         }
