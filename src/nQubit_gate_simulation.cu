@@ -1,15 +1,15 @@
 #include "../include/nQubit_gate_simulation.cuh"
 
-__global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector, int halfQubits)
+__global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector, int howManyQubits)
 {
     int threadIndex = threadIdx.x;
-    int kIndex = blockIdx.x * twoToThePower(halfQubits);    // blockIndex -> k coefficient
+    int kIndex = blockIdx.x * twoToThePower(howManyQubits);    // blockIndex -> k coefficient
 
-    for(int i = 0; i < halfQubits; i++)
+    for(int i = 0; i < howManyQubits; i++)
     {
         __syncthreads();
 
-        if(threadIndex < twoToThePower(halfQubits - 1))
+        if(threadIndex < twoToThePower(howManyQubits - 1))
         {
             int xorOffset = (1 << i); //2^qubit_index
 
