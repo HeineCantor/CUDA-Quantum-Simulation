@@ -8,8 +8,6 @@
 #include "print_util.cuh"
 #include "utils.cuh"
 
-#define DEFAULT_NUM_QUBITS 16
-
 #define DEFAULT_SHARED_MEMORY_OPT 0
 #define DEFAULT_COALESCING_OPT 0
 
@@ -28,9 +26,10 @@ __global__ void MSB_nQubit_kernel_shared(cuDoubleComplex* stateVector, int start
 __global__ void coalesced_MSB_nQubit_kernel(cuDoubleComplex* stateVector, int startingQubit, int m);
 
 /// @brief Starts the simulation of a factorizable n Qubits Gate (an Hadamard layer)
-/// @param numQubits        How many qubits to simulate
-/// @param sharedMemoryOpt  Option to make use of shared memory in kernels to optimize accesses
-/// @param coalescingOpt    Option to make use of coalescing optimizations for MSB kernel
-void nQubitGateSimulation(int numQubits = DEFAULT_NUM_QUBITS, int sharedMemoryOpt = 0, int coalescingOpt = 0);
+/// @param numQubits                How many qubits to simulate
+/// @param mainStreamElapsedTime    How much time passed for simulation (memory transfers included)
+/// @param sharedMemoryOpt          Option to make use of shared memory in kernels to optimize accesses
+/// @param coalescingOpt            Option to make use of coalescing optimizations for MSB kernel
+void nQubitGateSimulation(int numQubits, float &mainStreamElapsedTime, int sharedMemoryOpt = 0, int coalescingOpt = 0);
 
 #endif

@@ -80,7 +80,7 @@ __global__ void single_hadamard_kernel(cuDoubleComplex* stateVector, int statesN
     }
 }
 
-void singleGateSimulation(int numQubits)
+void singleGateSimulation(int numQubits, float &mainStreamElapsedTime)
 {
     int statesNumber = twoToThePower(numQubits);
     unsigned long int stateVectorSize = sizeof(cuDoubleComplex) * statesNumber;
@@ -101,7 +101,6 @@ void singleGateSimulation(int numQubits)
     cuDoubleComplex* deviceStateVector = NULL;
 
     cudaEvent_t start, stop;
-    float mainStreamElapsedTime;
 
     CHKERR( cudaEventCreate(&start) );
     CHKERR( cudaEventCreate(&stop) );
