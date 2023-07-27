@@ -218,7 +218,7 @@ void nQubitGateSimulation(int numQubits, float &mainStreamElapsedTime, int share
     {
         int halfQubits = numQubits / 2;
         howManyQubits = MAX_QUBITS_PER_BLOCK;
-        threadsPerBlock = twoToThePower(halfQubits - 1);
+        threadsPerBlock = twoToThePower(halfQubits);
 
         if(threadsPerBlock > MAX_THREADS_PER_BLOCK)
             threadsPerBlock = MAX_THREADS_PER_BLOCK;
