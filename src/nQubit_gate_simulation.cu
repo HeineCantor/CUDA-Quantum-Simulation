@@ -1,4 +1,5 @@
 #include "../include/nQubit_gate_simulation.cuh"
+#include "../include/validation.cuh"
 
 __global__ void LSB_nQubit_kernel(cuDoubleComplex* stateVector, int howManyQubits)
 {
@@ -313,6 +314,13 @@ void nQubitGateSimulation(int numQubits, float &mainStreamElapsedTime, int share
 	CHKERR( cudaEventDestroy( stop ) );
 
     CHKERR( cudaFree(deviceStateVector) );
+
+    cout << "STATE VECTOR VALIDATION: ";
+
+    if(naiveHadamardValidate(hostStateVector, numQubits))
+        cout << "OK" << endl;
+    else
+        cout << "FAILED" << endl;
 
     printStateVector(hostStateVector, statesNumber, 10);
     //printQubitsState(hostStateVector, NUM_QUBITS);
