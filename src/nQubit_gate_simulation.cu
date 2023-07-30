@@ -191,6 +191,8 @@ void nQubitGateSimulation(int numQubits, float &mainStreamElapsedTime, int share
     int blockNumber = sharedMemoryOpt ? twoToThePower(numQubits - MAX_QUBITS_PER_SM) : twoToThePower(numQubits / 2);
     int threadsPerBlock;
 
+    bool halfHostVector = false;
+
     printNQubitsSimulationDetails(numQubits, blockNumber, sharedMemoryEnabled, coalescingOptimizationEnabled);
 
     cuDoubleComplex unitaryComplex;
@@ -202,7 +204,18 @@ void nQubitGateSimulation(int numQubits, float &mainStreamElapsedTime, int share
     CHKERR( cudaEventCreate(&start) );
     CHKERR( cudaEventCreate(&stop) );
 
-    cuDoubleComplex* hostStateVector = new cuDoubleComplex[stateVectorSize];
+    cuDoubleComplex* hostStateVector = NULL;
+
+    try
+    {
+        hostStateVector = new cuDoubleComplex[stateVectorSize];
+    }
+    catch(const std::bad_alloc& e)
+    {
+        cout << "WARNING: Host Vector is too large. It will be allocated half of it and datas will be transferred in two steps." << endl;
+        hostStateVector = new cuDoubleComplex[stateVectorSize / 2];
+        halfHostVector = true;
+    }
 
     cuDoubleComplex* deviceStateVector = NULL;
 
@@ -304,7 +317,16 @@ void nQubitGateSimulation(int numQubits, float &mainStreamElapsedTime, int share
 
     CHKERR( cudaPeekAtLastError() );
 
-    CHKERR( cudaMemcpy(hostStateVector, deviceStateVector, stateVectorSize, cudaMemcpyDeviceToHost) );
+    if(!halfHostVector)
+    {
+        CHKERR( cudaMemcpy(hostStateVector, deviceStateVector, stateVectorSize, cudaMemcpyDeviceToHost) );
+    }
+    else
+    {
+        CHKERR( cudaMemcpy(hostStateVector, deviceStateVector, stateVectorSize / 2, cudaMemcpyDeviceToHost) );
+        // Host operations for copy...
+        CHKERR( cudaMemcpy(hostStateVector, deviceStateVector + statesNumber / 2, stateVectorSize / 2, cudaMemcpyDeviceToHost) );
+    }
 
     CHKERR( cudaEventRecord( stop, 0 ) );
     

@@ -6,14 +6,14 @@ int main()
     float totalElapsedTime = 0;
 
     float elapsedTime;
-    int meanIterations = 1;
+    int meanIterations = 100;
 
     for(int i = 0; i < meanIterations; i++)
     {
-        //singleGateSimulation(19, elapsedTime);
-        nQubitGateSimulation(22, elapsedTime, 7, 0);
-        //nQubitGateSimulation(26, elapsedTime, 9, 0);
-        //nQubitGateSimulation(19, elapsedTime, 7, 4);
+        //singleGateSimulation(27, elapsedTime);
+        //nQubitGateSimulation(27, elapsedTime, 0, 0);
+        //nQubitGateSimulation(27, elapsedTime, 9, 0);
+        nQubitGateSimulation(27, elapsedTime, 9, 4);
 
         totalElapsedTime += elapsedTime;
     }
