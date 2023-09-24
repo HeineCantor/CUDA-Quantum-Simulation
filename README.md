@@ -1,2 +1,2 @@
 # CUDA Quantum Simulation
-A CUDA Quantum Simulation implementation suite for the HPC Exam (UNINA).
+A CUDA Quantum Simulation suite for the exam of HPQC (UNINA).
